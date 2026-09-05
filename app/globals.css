@@ -1,26 +1,80 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-bg: #131516;
+  --color-bg-elevated: #1c1f20;
+  --color-bg-elevated-2: #24282a;
+  --color-border: rgba(234, 231, 225, 0.1);
+  --color-border-strong: rgba(234, 231, 225, 0.18);
+  --color-fg: #eae7e1;
+  --color-fg-muted: #a7ada9;
+  --color-fg-subtle: #767c79;
+  --color-accent: #2bc9a8;
+  --color-accent-strong: #1fae90;
+  --color-accent-deep: #12695a;
+  --color-danger: #e2564f;
+
+  /* Aileron webfont not bundled (no licensed files provided). Falls back to
+     system Helvetica, which is the brand's stated alternative. To add Aileron:
+     drop .woff2 files in app/fonts/, load via next/font/local in layout.tsx,
+     and prepend the resulting variable here. */
+  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --container-max: 1120px;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--color-bg);
+  --color-bg-elevated: var(--color-bg-elevated);
+  --color-bg-elevated-2: var(--color-bg-elevated-2);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+  --color-fg: var(--color-fg);
+  --color-fg-muted: var(--color-fg-muted);
+  --color-fg-subtle: var(--color-fg-subtle);
+  --color-accent: var(--color-accent);
+  --color-accent-strong: var(--color-accent-strong);
+  --color-accent-deep: var(--color-accent-deep);
+  --color-danger: var(--color-danger);
+  --font-sans: var(--font-sans);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #0b0d0d;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up {
+    animation: none;
+  }
 }

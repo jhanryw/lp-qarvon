@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LP Qarvon
 
-## Getting Started
+Landing page de aquisição B2B da Qarvon. Especificação completa (ICP, posicionamento,
+copy, arquitetura, critérios de aceite) em [`LP-QARVON-SPEC.md`](./LP-QARVON-SPEC.md) —
+leia antes de mexer em copy ou fluxo.
 
-First, run the development server:
+Stack: Next.js (App Router) + TypeScript + Tailwind v4. Sem banco de dados: leads vão
+para o Google Sheets via service account, com webhooks best-effort e redirect para
+Cal.com no sucesso.
+
+## Rodando localmente
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra http://localhost:3000 (ou a porta que o Next escolher, se 3000 estiver ocupada).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Sem nenhuma variável de ambiente configurada, o formulário ainda funciona de ponta a
+ponta: `/api/leads` detecta que o Google Sheets não está configurado e grava o lead em
+`.data/leads.local.jsonl` (gitignored, nunca usado em produção — ver
+`lib/devFallback.ts`). Isso existe só para testar o fluxo completo sem credenciais reais.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Variáveis de ambiente
 
-## Learn More
+Copie `.env.example` para `.env.local` e preencha o que já existir. Ver
+`LP-QARVON-SPEC.md` seção 17 para o que ainda está pendente (vídeo, Cal.com, Sheets,
+Pixel, política de privacidade completa).
 
-To learn more about Next.js, take a look at the following resources:
+| Variável | Uso |
+|---|---|
+| `CALCOM_BOOKING_URL` | URL real do tipo de evento no Cal.com. Sem ela, o redirect pós-formulário fica desabilitado (mostra apenas o botão de fallback). |
+| `GOOGLE_SERVICE_ACCOUNT_EMAIL` / `GOOGLE_PRIVATE_KEY` / `GOOGLE_SHEETS_SPREADSHEET_ID` / `GOOGLE_SHEETS_TAB_NAME` | Credenciais de service account com acesso de edição à planilha. Nunca expostas ao cliente — usadas só em `app/api/leads/route.ts` (server-side). |
+| `WEBHOOK_URLS` | Lista separada por vírgula. Disparado após persistir o lead; falha de webhook não derruba a resposta ao usuário. |
+| `WEBHOOK_SECRET` | Se definido, assina o corpo do webhook com HMAC-SHA256 no header `X-Qarvon-Signature`. |
+| `NEXT_PUBLIC_META_PIXEL_ID` | Ativa o Meta Pixel (PageView automático; `Lead` disparado só após submit bem-sucedido). |
+| `NEXT_PUBLIC_CASE_VIDEO_URL` | Depoimento de Pedro André (Luzanni) na seção de case. Sem isso, mostra placeholder em dev e a seção some em produção. |
+| `NEXT_PUBLIC_VSL_URL` | VSL institucional (roteiro em `LP-QARVON-SPEC.md` §14, ainda não gravada). |
+| `NEXT_PUBLIC_SITE_URL` | Usado em metadata/Open Graph. |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Como o lead viaja
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+form (client) → POST /api/leads
+  → valida com zod (lib/schema.ts)
+  → honeypot: se preenchido, responde 200 sem persistir nada
+  → scoreLead (lib/scoring.ts) → lead_score / lead_tier / is_icp
+  → appendLeadRow no Sheets (lib/sheets.ts), idempotente por lead_id
+    → se Sheets não configurado, cai no fallback local (dev only)
+  → dispatchLeadWebhooks (lib/webhooks.ts), best-effort, não bloqueia a resposta
+  → resposta inclui redirectUrl do Cal.com (lib/calcom.ts)
+  → client mostra estado de sucesso e redireciona
+```
 
-## Deploy on Vercel
+Se nada conseguir persistir o lead (Sheets falhou e fallback local falhou), a API
+responde 502 e o formulário mostra erro — o lead nunca é descartado silenciosamente.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Conteúdo pendente (`TODO_CONTENT`)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Alguns blocos dependem de ativos reais que ainda não existem (vídeo final, datas do
+case, política de privacidade completa, CNPJ no rodapé). Eles aparecem como caixas
+tracejadas vermelhas em desenvolvimento (`components/ui/TodoContent.tsx`) e desaparecem
+automaticamente em `next build`/produção — nada fabricado chega ao ar. Substitua o
+conteúdo real no lugar do `TodoContent`, não remova o wrapper até ter o dado definitivo.
+
+## Comandos
+
+```bash
+npm run dev      # servidor de desenvolvimento
+npm run build    # build de produção (roda TypeScript + lint)
+npm run lint     # eslint
+npx tsc --noEmit # typecheck isolado
+```
