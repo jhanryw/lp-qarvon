@@ -39,6 +39,9 @@ yarn-error.log*
 # local dev-only lead fallback (see lib/devFallback.ts)
 /.data
 
+# brainstorming visual companion session files
+/.superpowers
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
