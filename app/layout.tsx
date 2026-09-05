@@ -2,11 +2,24 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://qarvon.com.br";
+const FALLBACK_SITE_URL = "https://qarvon.com.br";
 const PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
+// Guards build-time metadata generation against a malformed optional env
+// var (e.g. NEXT_PUBLIC_SITE_URL set without a protocol) — an invalid
+// `new URL()` here would otherwise throw while Next collects page data.
+function resolveSiteUrl(): URL {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SITE_URL || FALLBACK_SITE_URL);
+  } catch {
+    return new URL(FALLBACK_SITE_URL);
+  }
+}
+
+const SITE_URL = resolveSiteUrl();
+
 export const metadata: Metadata = {
-  metadataBase: new URL(SITE_URL),
+  metadataBase: SITE_URL,
   title: "Qarvon — Assessoria de crescimento para varejo",
   description:
     "A Qarvon identifica onde sua operação de varejo perde vendas e corrige os gargalos antes de escalar o investimento em mídia.",

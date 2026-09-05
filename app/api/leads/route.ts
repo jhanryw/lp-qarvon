@@ -7,6 +7,23 @@ import { buildCalcomRedirectUrl } from "@/lib/calcom";
 import { isRateLimited } from "@/lib/rateLimit";
 import { appendLeadLocally } from "@/lib/devFallback";
 
+// This route depends on Node-only APIs (@googleapis/sheets' underlying
+// google-auth-library, node:crypto, node:fs/promises) that don't run on the
+// Edge runtime. App Router route handlers default to Node already, so this
+// doesn't change today's behavior — it pins that default so a future Next.js
+// version (or a misconfigured deployment platform) can't silently switch
+// this route to Edge and break it.
+export const runtime = "nodejs";
+
+// Deliberately NOT setting `export const dynamic = "force-dynamic"` here:
+// this file only exports POST, so Next has no GET to statically render or
+// prerender in the first place — the flag would be a no-op. It also would
+// not have prevented the EasyPanel build stall, since "Collecting page data"
+// imports every route module (to build the manifest) regardless of static
+// vs. dynamic; the stall was the cost of importing the ~213MB `googleapis`
+// package that lib/sheets.ts pulled in, now fixed by switching to the
+// scoped `@googleapis/sheets` package (~1MB) — see lib/sheets.ts.
+
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 

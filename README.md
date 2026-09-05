@@ -64,6 +64,28 @@ tracejadas vermelhas em desenvolvimento (`components/ui/TodoContent.tsx`) e desa
 automaticamente em `next build`/produção — nada fabricado chega ao ar. Substitua o
 conteúdo real no lugar do `TodoContent`, não remova o wrapper até ter o dado definitivo.
 
+## Deploy (Docker / EasyPanel)
+
+Build de produção: multi-stage `Dockerfile` → `output: "standalone"` (`next.config.ts`) →
+`node .next/standalone/server.js`, ouvindo em `0.0.0.0:3000` (`HOSTNAME`/`PORT` no
+Dockerfile). No EasyPanel: builder Dockerfile, build path `/`, **porta interna 3000**
+(não configure 80 dentro do container).
+
+Nenhuma variável de ambiente é obrigatória para o build ou para o site subir e servir
+`/` e `/privacidade` — todas as integrações (Sheets, webhook, Cal.com, Pixel) são lidas
+em runtime, dentro de handlers, nunca no escopo do módulo. Sem `GOOGLE_SERVICE_ACCOUNT_EMAIL`
+/ `GOOGLE_PRIVATE_KEY` / `GOOGLE_SHEETS_SPREADSHEET_ID` configuradas, `/api/leads` responde
+502 em produção (falha alto, não perde o lead silenciosamente — ver `lib/devFallback.ts`).
+Essas três são as únicas variáveis realmente necessárias para o formulário persistir de
+verdade; o resto é incremental.
+
+**Nota histórica**: a dependência `googleapis` (pacote monolítico, ~213MB descompactados —
+todos os clients de API do Google, não só Sheets) foi trocada por `@googleapis/sheets`
+(~1MB, mesma classe de auth/client, só a API que usamos) depois de causar builds
+anormalmente lentos/travados na fase "Collecting page data" em builders com poucos
+recursos (ex. EasyPanel). Ver comentário no topo de `lib/sheets.ts`. Não reintroduza
+`googleapis` sem um motivo que justifique voltar a pagar esse custo.
+
 ## Comandos
 
 ```bash

@@ -1,4 +1,12 @@
-import { google } from "googleapis";
+import { sheets, auth } from "@googleapis/sheets";
+
+/**
+ * Uses the scoped @googleapis/sheets package instead of the `googleapis`
+ * monolith. `googleapis` unpacks to ~213MB (every Google API client, most of
+ * which we never touch) versus ~1MB here — that size is exactly what turned
+ * "Collecting page data" into a multi-minute stall during the EasyPanel
+ * Docker build. Same generated client/auth classes, just scoped to Sheets.
+ */
 
 /**
  * Column order in the "Leads" sheet tab. Keep in sync with
@@ -54,13 +62,13 @@ function getSheetsClient() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
-  const auth = new google.auth.JWT({
+  const jwt = new auth.JWT({
     email,
     key: privateKey,
     scopes: ["https://www.googleapis.com/auth/spreadsheets"],
   });
 
-  return google.sheets({ version: "v4", auth });
+  return sheets({ version: "v4", auth: jwt });
 }
 
 function sheetTabName(): string {
