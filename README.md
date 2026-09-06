@@ -5,8 +5,12 @@ copy, arquitetura, critérios de aceite) em [`LP-QARVON-SPEC.md`](./LP-QARVON-SP
 leia antes de mexer em copy ou fluxo.
 
 Stack: Next.js (App Router) + TypeScript + Tailwind v4. Sem banco de dados: leads vão
-para o Google Sheets via service account, com webhooks best-effort e redirect para
-Cal.com no sucesso.
+para o Google Sheets via service account, com webhooks best-effort. Formulário
+deliberadamente curto (5 perguntas: nome, WhatsApp, Instagram/site, faturamento, se já
+investe em tráfego) — a LP já qualifica pelo posicionamento/copy, o form só precisa
+capturar o suficiente pra um humano avaliar e ligar. Pós-envio vai para `/obrigado`, não
+para o Cal.com — agendamento é manual, depois do contato humano (a integração com
+Cal.com continua no código, só não é mais o redirect automático).
 
 ## Rodando localmente
 
@@ -30,7 +34,7 @@ Pixel, política de privacidade completa).
 
 | Variável | Uso |
 |---|---|
-| `CALCOM_BOOKING_URL` | URL real do tipo de evento no Cal.com. Sem ela, o redirect pós-formulário fica desabilitado (mostra apenas o botão de fallback). |
+| `CALCOM_BOOKING_URL` | URL real do tipo de evento no Cal.com. Não é mais o redirect automático (isso agora é `/obrigado`) — fica só logada por lead (`cal_redirect_url` na planilha) para envio manual. |
 | `GOOGLE_SERVICE_ACCOUNT_EMAIL` / `GOOGLE_PRIVATE_KEY` / `GOOGLE_SHEETS_SPREADSHEET_ID` / `GOOGLE_SHEETS_TAB_NAME` | Credenciais de service account com acesso de edição à planilha. Nunca expostas ao cliente — usadas só em `app/api/leads/route.ts` (server-side). |
 | `WEBHOOK_URLS` | Lista separada por vírgula. Disparado após persistir o lead; falha de webhook não derruba a resposta ao usuário. |
 | `WEBHOOK_SECRET` | Se definido, assina o corpo do webhook com HMAC-SHA256 no header `X-Qarvon-Signature`. |
@@ -49,8 +53,9 @@ form (client) → POST /api/leads
   → appendLeadRow no Sheets (lib/sheets.ts), idempotente por lead_id
     → se Sheets não configurado, cai no fallback local (dev only)
   → dispatchLeadWebhooks (lib/webhooks.ts), best-effort, não bloqueia a resposta
-  → resposta inclui redirectUrl do Cal.com (lib/calcom.ts)
-  → client mostra estado de sucesso e redireciona
+  → cal_redirect_url (lib/calcom.ts) calculado e logado na planilha, mas não usado como redirect
+  → resposta inclui redirectUrl = "/obrigado"
+  → client mostra estado de sucesso e navega para /obrigado
 ```
 
 Se nada conseguir persistir o lead (Sheets falhou e fallback local falhou), a API

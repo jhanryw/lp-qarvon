@@ -1,15 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import {
-  cargoOptions,
-  capacidadeInvestimentoOptions,
-  faixaMidiaOptions,
-  faturamentoOptions,
-  gargaloOptions,
-  jaInvesteTrafegoOptions,
-  stepSchemas,
-} from "@/lib/schema";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useRouter } from "next/navigation";
+import { faturamentoOptions, jaInvesteTrafegoOptions, stepSchemas } from "@/lib/schema";
 import { captureAttribution } from "@/lib/attribution";
 import { formatBrPhone } from "@/lib/phone";
 import { Button } from "@/components/ui/Button";
@@ -20,40 +13,25 @@ import { Field, inputClassName } from "./Field";
 type FormState = {
   nome: string;
   whatsapp: string;
-  email: string;
-  empresa: string;
   instagram_site: string;
-  cargo: string;
-  segmento: string;
   faturamento: string;
   ja_investe_trafego: string;
-  faixa_midia: string;
-  gargalo: string;
-  objetivo_90d: string;
-  faixa_investimento_assessoria: string;
-  consentimento: boolean;
   website: string;
 };
 
 const initialState: FormState = {
   nome: "",
   whatsapp: "",
-  email: "",
-  empresa: "",
   instagram_site: "",
-  cargo: "",
-  segmento: "",
   faturamento: "",
   ja_investe_trafego: "",
-  faixa_midia: "",
-  gargalo: "",
-  objetivo_90d: "",
-  faixa_investimento_assessoria: "",
-  consentimento: false,
   website: "",
 };
 
 const TOTAL_STEPS = stepSchemas.length;
+// Selecting an option on these steps advances immediately — no extra click.
+// Keeps the whole application to 5 taps, aiming for a sub-60s completion.
+const AUTO_ADVANCE_STEPS = new Set([3, 4]);
 
 declare global {
   interface Window {
@@ -62,12 +40,12 @@ declare global {
 }
 
 export function LeadForm() {
+  const router = useRouter();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(initialState);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [serverError, setServerError] = useState<string | null>(null);
-  const [redirectUrl, setRedirectUrl] = useState<string>("");
   const leadIdRef = useRef<string>("");
 
   useEffect(() => {
@@ -79,10 +57,10 @@ export function LeadForm() {
     setErrors((prev) => ({ ...prev, [key]: "" }));
   }
 
-  function validateStep(): boolean {
-    const schema = stepSchemas[step];
+  function validateStep(currentStep: number, currentForm: FormState): boolean {
+    const schema = stepSchemas[currentStep];
     const fields = Object.keys(schema.shape) as Array<keyof FormState>;
-    const subset = Object.fromEntries(fields.map((key) => [key, form[key]]));
+    const subset = Object.fromEntries(fields.map((key) => [key, currentForm[key]]));
     const result = schema.safeParse(subset);
 
     if (result.success) {
@@ -100,7 +78,7 @@ export function LeadForm() {
   }
 
   function handleNext() {
-    if (!validateStep()) return;
+    if (!validateStep(step, form)) return;
     setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1));
   }
 
@@ -108,8 +86,24 @@ export function LeadForm() {
     setStep((s) => Math.max(s - 1, 0));
   }
 
-  async function handleSubmit() {
-    if (!validateStep()) return;
+  /** Radio steps call this directly with the freshly-picked value so submit/advance
+   * doesn't race the next render of `form`. */
+  function handleAutoAdvance<K extends keyof FormState>(key: K, value: FormState[K]) {
+    const nextForm = { ...form, [key]: value };
+    setForm(nextForm);
+    setErrors((prev) => ({ ...prev, [key]: "" }));
+
+    if (!validateStep(step, nextForm)) return;
+
+    if (step === TOTAL_STEPS - 1) {
+      void handleSubmit(nextForm);
+    } else {
+      setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1));
+    }
+  }
+
+  async function handleSubmit(currentForm: FormState) {
+    if (!validateStep(TOTAL_STEPS - 1, currentForm)) return;
     setStatus("submitting");
     setServerError(null);
 
@@ -118,7 +112,7 @@ export function LeadForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
+          ...currentForm,
           lead_id: leadIdRef.current,
           attribution: captureAttribution(),
         }),
@@ -134,17 +128,17 @@ export function LeadForm() {
 
       setStatus("success");
       window.fbq?.("track", "Lead");
-
-      const nextRedirectUrl: string = data.redirectUrl ?? "";
-      setRedirectUrl(nextRedirectUrl);
-      window.setTimeout(() => {
-        if (nextRedirectUrl && nextRedirectUrl !== "#" && nextRedirectUrl !== "#calcom-not-configured") {
-          window.location.href = nextRedirectUrl;
-        }
-      }, 900);
+      router.push(data.redirectUrl || "/obrigado");
     } catch {
       setStatus("error");
       setServerError("Falha de conexão. Verifique sua internet e tente novamente.");
+    }
+  }
+
+  function handleTextStepKeyDown(e: KeyboardEvent) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleNext();
     }
   }
 
@@ -154,16 +148,7 @@ export function LeadForm() {
     return (
       <div className="rounded-2xl border border-accent/30 bg-accent/10 p-8 text-center animate-fade-up">
         <p className="text-lg font-semibold text-fg">Aplicação enviada.</p>
-        <p className="mt-2 text-sm text-fg-muted">
-          Você será redirecionado para escolher um horário. Se isso não acontecer em alguns
-          segundos, use o botão abaixo.
-        </p>
-        <a
-          href={redirectUrl || "#"}
-          className="mt-5 inline-flex min-h-[44px] items-center justify-center rounded-full bg-accent px-6 py-3 text-sm font-semibold text-[#08110f]"
-        >
-          Agendar minha reunião
-        </a>
+        <p className="mt-2 text-sm text-fg-muted">Redirecionando…</p>
       </div>
     );
   }
@@ -174,179 +159,73 @@ export function LeadForm() {
 
       <div className="flex flex-col gap-4">
         {step === 0 && (
-          <>
-            <Field label="Nome completo" htmlFor="nome" error={errors.nome}>
-              <input
-                id="nome"
-                className={inputClassName}
-                value={form.nome}
-                onChange={(e) => update("nome", e.target.value)}
-                autoComplete="name"
-              />
-            </Field>
-            <Field label="WhatsApp com DDD" htmlFor="whatsapp" error={errors.whatsapp}>
-              <input
-                id="whatsapp"
-                inputMode="numeric"
-                className={inputClassName}
-                value={form.whatsapp}
-                onChange={(e) => update("whatsapp", formatBrPhone(e.target.value))}
-                placeholder="(11) 91234-5678"
-                autoComplete="tel"
-              />
-            </Field>
-            <Field label="E-mail" htmlFor="email" error={errors.email}>
-              <input
-                id="email"
-                type="email"
-                className={inputClassName}
-                value={form.email}
-                onChange={(e) => update("email", e.target.value)}
-                autoComplete="email"
-              />
-            </Field>
-          </>
+          <Field label="Nome completo" htmlFor="nome" error={errors.nome}>
+            <input
+              id="nome"
+              className={inputClassName}
+              value={form.nome}
+              onChange={(e) => update("nome", e.target.value)}
+              onKeyDown={handleTextStepKeyDown}
+              autoComplete="name"
+              autoFocus
+            />
+          </Field>
         )}
 
         {step === 1 && (
-          <>
-            <Field label="Nome da empresa" htmlFor="empresa" error={errors.empresa}>
-              <input
-                id="empresa"
-                className={inputClassName}
-                value={form.empresa}
-                onChange={(e) => update("empresa", e.target.value)}
-              />
-            </Field>
-            <Field label="Instagram ou site" htmlFor="instagram_site" error={errors.instagram_site}>
-              <input
-                id="instagram_site"
-                className={inputClassName}
-                value={form.instagram_site}
-                onChange={(e) => update("instagram_site", e.target.value)}
-                placeholder="@sualoja ou seusite.com.br"
-              />
-            </Field>
-            <Field label="Seu cargo" htmlFor="cargo" error={errors.cargo}>
-              <RadioCardGroup
-                name="cargo"
-                options={cargoOptions}
-                value={form.cargo}
-                onChange={(v) => update("cargo", v)}
-              />
-            </Field>
-          </>
+          <Field label="WhatsApp com DDD" htmlFor="whatsapp" error={errors.whatsapp}>
+            <input
+              id="whatsapp"
+              inputMode="numeric"
+              className={inputClassName}
+              value={form.whatsapp}
+              onChange={(e) => update("whatsapp", formatBrPhone(e.target.value))}
+              onKeyDown={handleTextStepKeyDown}
+              placeholder="(11) 91234-5678"
+              autoComplete="tel"
+              autoFocus
+            />
+          </Field>
         )}
 
         {step === 2 && (
-          <>
-            <Field label="Segmento da loja" htmlFor="segmento" error={errors.segmento}>
-              <input
-                id="segmento"
-                className={inputClassName}
-                value={form.segmento}
-                onChange={(e) => update("segmento", e.target.value)}
-                placeholder="Moda, calçados, ótica, móveis..."
-              />
-            </Field>
-            <Field label="Faturamento médio mensal" htmlFor="faturamento" error={errors.faturamento}>
-              <RadioCardGroup
-                name="faturamento"
-                options={faturamentoOptions}
-                value={form.faturamento}
-                onChange={(v) => update("faturamento", v)}
-              />
-            </Field>
-          </>
+          <Field label="Instagram ou site" htmlFor="instagram_site" error={errors.instagram_site}>
+            <input
+              id="instagram_site"
+              className={inputClassName}
+              value={form.instagram_site}
+              onChange={(e) => update("instagram_site", e.target.value)}
+              onKeyDown={handleTextStepKeyDown}
+              placeholder="@sualoja ou seusite.com.br"
+              autoFocus
+            />
+          </Field>
         )}
 
         {step === 3 && (
-          <>
-            <Field
-              label="Hoje já investe em tráfego pago?"
-              htmlFor="ja_investe_trafego"
-              error={errors.ja_investe_trafego}
-            >
-              <RadioCardGroup
-                name="ja_investe_trafego"
-                options={jaInvesteTrafegoOptions}
-                value={form.ja_investe_trafego}
-                onChange={(v) => update("ja_investe_trafego", v)}
-              />
-            </Field>
-            <Field
-              label="Faixa atual de investimento mensal em mídia"
-              htmlFor="faixa_midia"
-              error={errors.faixa_midia}
-            >
-              <RadioCardGroup
-                name="faixa_midia"
-                options={faixaMidiaOptions}
-                value={form.faixa_midia}
-                onChange={(v) => update("faixa_midia", v)}
-                columns={2}
-              />
-            </Field>
-          </>
+          <Field label="Faturamento mensal" htmlFor="faturamento" error={errors.faturamento}>
+            <RadioCardGroup
+              name="faturamento"
+              options={faturamentoOptions}
+              value={form.faturamento}
+              onChange={(v) => handleAutoAdvance("faturamento", v)}
+            />
+          </Field>
         )}
 
         {step === 4 && (
-          <>
-            <Field label="Principal gargalo percebido" htmlFor="gargalo" error={errors.gargalo}>
-              <RadioCardGroup
-                name="gargalo"
-                options={gargaloOptions}
-                value={form.gargalo}
-                onChange={(v) => update("gargalo", v)}
-                columns={2}
-              />
-            </Field>
-            <Field
-              label="Objetivo principal nos próximos 90 dias"
-              htmlFor="objetivo_90d"
-              error={errors.objetivo_90d}
-            >
-              <textarea
-                id="objetivo_90d"
-                className={`${inputClassName} min-h-[96px] resize-none`}
-                value={form.objetivo_90d}
-                onChange={(e) => update("objetivo_90d", e.target.value)}
-              />
-            </Field>
-          </>
-        )}
-
-        {step === 5 && (
-          <>
-            <Field
-              label="Capacidade de investimento na assessoria"
-              htmlFor="faixa_investimento_assessoria"
-              error={errors.faixa_investimento_assessoria}
-            >
-              <RadioCardGroup
-                name="faixa_investimento_assessoria"
-                options={capacidadeInvestimentoOptions}
-                value={form.faixa_investimento_assessoria}
-                onChange={(v) => update("faixa_investimento_assessoria", v)}
-              />
-            </Field>
-            <label className="flex items-start gap-3 text-sm text-fg-muted">
-              <input
-                type="checkbox"
-                className="mt-1 size-4 accent-accent"
-                checked={form.consentimento}
-                onChange={(e) => update("consentimento", e.target.checked)}
-              />
-              <span>
-                Aceito ser contatado pela Qarvon sobre minha aplicação e concordo com a{" "}
-                <a href="/privacidade" className="text-accent underline underline-offset-2">
-                  política de privacidade
-                </a>
-                .
-              </span>
-            </label>
-            {errors.consentimento ? <p className="text-sm text-danger">{errors.consentimento}</p> : null}
-          </>
+          <Field
+            label="Hoje você já investe em tráfego pago?"
+            htmlFor="ja_investe_trafego"
+            error={errors.ja_investe_trafego}
+          >
+            <RadioCardGroup
+              name="ja_investe_trafego"
+              options={jaInvesteTrafegoOptions}
+              value={form.ja_investe_trafego}
+              onChange={(v) => handleAutoAdvance("ja_investe_trafego", v)}
+            />
+          </Field>
         )}
 
         {/* Honeypot: hidden from real users, catches naive bots. */}
@@ -362,25 +241,43 @@ export function LeadForm() {
 
         {serverError ? <p className="text-sm text-danger">{serverError}</p> : null}
 
-        <div className="mt-2 flex items-center justify-between gap-3">
-          {step > 0 ? (
-            <Button type="button" variant="secondary" onClick={handleBack}>
-              Voltar
-            </Button>
-          ) : (
-            <span />
-          )}
+        {!AUTO_ADVANCE_STEPS.has(step) && (
+          <div className="mt-2 flex items-center justify-between gap-3">
+            {step > 0 ? (
+              <Button type="button" variant="secondary" onClick={handleBack}>
+                Voltar
+              </Button>
+            ) : (
+              <span />
+            )}
 
-          {isLastStep ? (
-            <Button type="button" onClick={handleSubmit} disabled={status === "submitting"}>
-              {status === "submitting" ? "Enviando..." : "Quero analisar minha operação"}
-            </Button>
-          ) : (
-            <Button type="button" onClick={handleNext}>
+            <Button type="button" onClick={handleNext} disabled={status === "submitting"}>
               Continuar
             </Button>
-          )}
-        </div>
+          </div>
+        )}
+
+        {AUTO_ADVANCE_STEPS.has(step) && step > 0 && (
+          <button
+            type="button"
+            onClick={handleBack}
+            className="self-start text-sm text-fg-muted underline underline-offset-4 hover:text-fg"
+          >
+            Voltar
+          </button>
+        )}
+
+        {isLastStep && status === "submitting" && (
+          <p className="text-center text-sm text-fg-muted">Enviando…</p>
+        )}
+
+        <p className="text-center text-xs text-fg-subtle">
+          Ao enviar, você concorda em ser contatado pela Qarvon.{" "}
+          <a href="/privacidade" className="underline underline-offset-2 hover:text-fg-muted">
+            Política de privacidade
+          </a>
+          .
+        </p>
       </div>
     </div>
   );

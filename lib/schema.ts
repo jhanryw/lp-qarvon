@@ -1,51 +1,14 @@
 import { z } from "zod";
 
-export const cargoOptions = [
-  "Dono(a)/Sócio(a)",
-  "Diretor(a)/Gestor(a)",
-  "Marketing",
-  "Outro",
-] as const;
-
 export const faturamentoOptions = [
-  "Até R$30 mil",
-  "R$30–70 mil",
-  "R$70–150 mil",
-  "R$150–300 mil",
-  "R$300 mil+",
+  "Até R$30 mil/mês",
+  "R$30 mil a R$70 mil/mês",
+  "R$70 mil a R$150 mil/mês",
+  "R$150 mil a R$300 mil/mês",
+  "R$300 mil+/mês",
 ] as const;
 
-export const jaInvesteTrafegoOptions = [
-  "Sim",
-  "Já investi, mas parei",
-  "Nunca investi",
-] as const;
-
-export const faixaMidiaOptions = [
-  "Até R$2 mil",
-  "R$2–5 mil",
-  "R$5–10 mil",
-  "R$10–20 mil",
-  "R$20 mil+",
-  "Ainda não invisto",
-] as const;
-
-export const gargaloOptions = [
-  "Gerar demanda",
-  "Criativos/oferta",
-  "Atendimento/follow-up",
-  "Conversão em vendas",
-  "Falta de previsibilidade",
-  "Não sei onde está o problema",
-] as const;
-
-export const capacidadeInvestimentoOptions = [
-  "Até R$5 mil/mês",
-  "R$5–12 mil/mês",
-  "R$12–20 mil/mês",
-  "R$20 mil+/mês",
-  "Prefiro conversar antes de definir",
-] as const;
+export const jaInvesteTrafegoOptions = ["Já invisto", "Ainda não invisto"] as const;
 
 export const attributionSchema = z.object({
   page_url: z.string().max(2048).optional().default(""),
@@ -62,6 +25,12 @@ export const attributionSchema = z.object({
 
 export type Attribution = z.infer<typeof attributionSchema>;
 
+/**
+ * Deliberately short: the LP itself (positioning, copy, promise) does most
+ * of the qualifying. The form only needs enough to let a human evaluate and
+ * reach out — see the 2026-XX simplification request. Do not add fields
+ * back without a fresh explicit ask; this list is intentionally exhaustive.
+ */
 export const leadInputSchema = z.object({
   lead_id: z.string().uuid(),
   nome: z.string().trim().min(2, "Informe seu nome completo").max(160),
@@ -70,20 +39,9 @@ export const leadInputSchema = z.object({
     .trim()
     .min(10, "Informe um WhatsApp válido com DDD")
     .max(20),
-  email: z.string().trim().email("Informe um e-mail válido").max(200),
-  empresa: z.string().trim().min(2, "Informe o nome da empresa").max(160),
   instagram_site: z.string().trim().min(2, "Informe Instagram ou site").max(200),
-  cargo: z.enum(cargoOptions),
-  segmento: z.string().trim().min(2, "Informe o segmento").max(160),
   faturamento: z.enum(faturamentoOptions),
   ja_investe_trafego: z.enum(jaInvesteTrafegoOptions),
-  faixa_midia: z.enum(faixaMidiaOptions),
-  gargalo: z.enum(gargaloOptions),
-  objetivo_90d: z.string().trim().min(3, "Conte seu objetivo para os próximos 90 dias").max(500),
-  faixa_investimento_assessoria: z.enum(capacidadeInvestimentoOptions),
-  consentimento: z.literal(true, {
-    error: "É necessário aceitar o contato para continuar",
-  }),
   // Honeypot: hidden from real users via CSS. Deliberately unrestricted so a
   // bot filling it still parses successfully — app/api/leads/route.ts reads
   // this value and silently drops the submission instead of erroring, which
@@ -112,20 +70,11 @@ export const leadRequestSchema = leadInputSchema.extend({
 
 export type LeadRequest = z.infer<typeof leadRequestSchema>;
 
-export const formStepFields = [
-  ["nome", "whatsapp", "email"],
-  ["empresa", "instagram_site", "cargo"],
-  ["segmento", "faturamento"],
-  ["ja_investe_trafego", "faixa_midia"],
-  ["gargalo", "objetivo_90d"],
-  ["faixa_investimento_assessoria", "consentimento"],
-] as const;
-
+// One field per step — five steps total, aiming for a sub-60s application.
 export const stepSchemas = [
-  leadInputSchema.pick({ nome: true, whatsapp: true, email: true }),
-  leadInputSchema.pick({ empresa: true, instagram_site: true, cargo: true }),
-  leadInputSchema.pick({ segmento: true, faturamento: true }),
-  leadInputSchema.pick({ ja_investe_trafego: true, faixa_midia: true }),
-  leadInputSchema.pick({ gargalo: true, objetivo_90d: true }),
-  leadInputSchema.pick({ faixa_investimento_assessoria: true, consentimento: true }),
+  leadInputSchema.pick({ nome: true }),
+  leadInputSchema.pick({ whatsapp: true }),
+  leadInputSchema.pick({ instagram_site: true }),
+  leadInputSchema.pick({ faturamento: true }),
+  leadInputSchema.pick({ ja_investe_trafego: true }),
 ] as const;

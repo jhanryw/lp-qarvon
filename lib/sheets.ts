@@ -9,8 +9,9 @@ import { sheets, auth } from "@googleapis/sheets";
  */
 
 /**
- * Column order in the "Leads" sheet tab. Keep in sync with
- * LP-QARVON-SPEC.md section 8. lead_id lives in column B and is the
+ * Column order in the "Leads" sheet tab. Keep in sync with lib/schema.ts
+ * (simplified form — nome/whatsapp/instagram_site/faturamento/
+ * ja_investe_trafego only). lead_id lives in column B and is the
  * idempotency key: a resubmitted lead_id (client retry) is skipped rather
  * than appended twice.
  */
@@ -19,17 +20,9 @@ export const SHEET_COLUMNS = [
   "lead_id",
   "nome",
   "whatsapp",
-  "email",
-  "empresa",
   "instagram_site",
-  "cargo",
-  "segmento",
   "faturamento",
   "ja_investe_trafego",
-  "faixa_midia",
-  "gargalo",
-  "objetivo_90d",
-  "faixa_investimento_assessoria",
   "lead_score",
   "lead_tier",
   "is_icp",

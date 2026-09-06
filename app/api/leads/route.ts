@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { leadRequestSchema } from "@/lib/schema";
 import { scoreLead } from "@/lib/scoring";
-import { appendLeadRow, isSheetsConfigured, type SheetRow } from "@/lib/sheets";
+import { persistLead, type LeadRecord } from "@/lib/leadPersistence";
 import { dispatchLeadWebhooks } from "@/lib/webhooks";
 import { buildCalcomRedirectUrl } from "@/lib/calcom";
 import { isRateLimited } from "@/lib/rateLimit";
-import { appendLeadLocally } from "@/lib/devFallback";
 
 // This route depends on Node-only APIs (@googleapis/sheets' underlying
 // google-auth-library, node:crypto, node:fs/promises) that don't run on the
@@ -54,24 +53,20 @@ export async function POST(request: Request) {
   }
 
   const { lead_score, lead_tier, is_icp } = scoreLead(lead);
+  // Cal.com integration stays intact and the link is still logged for
+  // reference, but it's no longer used as the automatic post-submit
+  // redirect — scheduling now happens manually after a human reaches out.
+  // See app/obrigado/page.tsx.
   const cal_redirect_url = buildCalcomRedirectUrl(lead, lead.attribution);
 
-  const row: SheetRow = {
+  const row: LeadRecord = {
     submitted_at: new Date().toISOString(),
     lead_id: lead.lead_id,
     nome: lead.nome,
     whatsapp: lead.whatsapp,
-    email: lead.email,
-    empresa: lead.empresa,
     instagram_site: lead.instagram_site,
-    cargo: lead.cargo,
-    segmento: lead.segmento,
     faturamento: lead.faturamento,
     ja_investe_trafego: lead.ja_investe_trafego,
-    faixa_midia: lead.faixa_midia,
-    gargalo: lead.gargalo,
-    objetivo_90d: lead.objetivo_90d,
-    faixa_investimento_assessoria: lead.faixa_investimento_assessoria,
     lead_score,
     lead_tier,
     is_icp,
@@ -90,29 +85,9 @@ export async function POST(request: Request) {
     webhook_status: "pending",
   };
 
-  let persisted = false;
-  let duplicate = false;
-
-  if (isSheetsConfigured()) {
-    try {
-      const result = await appendLeadRow(row);
-      persisted = true;
-      duplicate = result.duplicate;
-    } catch (error) {
-      console.error("[api/leads] Google Sheets append failed:", error);
-    }
-  } else {
-    console.warn("[api/leads] Google Sheets not configured — using local dev fallback only.");
-  }
-
-  if (!persisted) {
-    try {
-      await appendLeadLocally(row);
-      persisted = process.env.NODE_ENV !== "production";
-    } catch (error) {
-      console.error("[api/leads] local dev fallback failed:", error);
-    }
-  }
+  // Route/form don't know or care which backend this is (Sheets today,
+  // maybe Supabase/CRM tomorrow) — see lib/leadPersistence.ts.
+  const { persisted, duplicate } = await persistLead(row);
 
   if (!persisted) {
     // Lead couldn't be saved anywhere. Fail loudly instead of silently
@@ -131,17 +106,9 @@ export async function POST(request: Request) {
     lead: {
       name: lead.nome,
       phone: lead.whatsapp,
-      email: lead.email,
-      company: lead.empresa,
       instagram_or_site: lead.instagram_site,
-      role: lead.cargo,
-      segment: lead.segmento,
       revenue_range: lead.faturamento,
       paid_media_status: lead.ja_investe_trafego,
-      paid_media_range: lead.faixa_midia,
-      bottleneck: lead.gargalo,
-      goal_90d: lead.objetivo_90d,
-      budget_range: lead.faixa_investimento_assessoria,
       score: lead_score,
       tier: lead_tier,
       is_icp,
@@ -156,6 +123,9 @@ export async function POST(request: Request) {
   return NextResponse.json({
     success: true,
     duplicate,
-    redirectUrl: cal_redirect_url,
+    // Cal.com link is preserved in the sheet row (cal_redirect_url) for
+    // manual use, but the visitor is sent to our own thank-you page —
+    // scheduling now happens after a human reviews the lead.
+    redirectUrl: "/obrigado",
   });
 }
