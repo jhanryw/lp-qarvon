@@ -1,9 +1,12 @@
 import { Container } from "@/components/ui/Container";
 import { SectionEyebrow, SectionHeading } from "@/components/ui/SectionHeading";
-import { CrtFrame } from "@/components/ui/CrtFrame";
+import { EditorialVideoFrame } from "@/components/ui/EditorialVideoFrame";
+import { VideoEmbed } from "@/components/ui/VideoEmbed";
 import { AnimatedLineChart } from "@/components/ui/AnimatedLineChart";
 import { AssetPlaceholder } from "@/components/ui/AssetPlaceholder";
 import { ContextualCta } from "@/components/ui/ContextualCta";
+
+const CASE_VIDEO_SRC = process.env.NEXT_PUBLIC_CASE_VIDEO_URL || "/videos/depoimento-pedro-andre.mp4";
 
 const CHAPTERS = [
   {
@@ -34,7 +37,7 @@ const CHAPTERS = [
   {
     n: "06",
     title: "O resultado",
-    text: "R$210 mil de faturamento mensal. Pedro André confirma no vídeo.",
+    text: "Confirmado por Pedro André, no vídeo acima.",
   },
 ] as const;
 
@@ -43,18 +46,34 @@ export function CaseSection() {
     <section id="case" className="scroll-mt-8 border-b border-border py-16 sm:py-24">
       <Container>
         <div className="mx-auto max-w-2xl text-center">
-          <SectionEyebrow>Mini-documentário</SectionEyebrow>
+          <SectionEyebrow>O case</SectionEyebrow>
           <SectionHeading>Luzanni: por dentro dos meses que levaram de R$50 mil a R$210 mil.</SectionHeading>
         </div>
 
         <div className="mx-auto mt-10 grid max-w-5xl gap-10 lg:grid-cols-2 lg:items-start">
           <div className="flex flex-col gap-6">
-            <CrtFrame
-              src={process.env.NEXT_PUBLIC_CASE_VIDEO_URL}
-              title="Depoimento de Pedro André — Luzanni"
-              todoLabel="Vídeo de depoimento (Pedro André / Luzanni) — ASSET-MANIFEST.md item 2. Definir NEXT_PUBLIC_CASE_VIDEO_URL."
-              label="QARVON.CASE // LUZANNI"
-            />
+            <EditorialVideoFrame label="Case real">
+              <VideoEmbed
+                src={CASE_VIDEO_SRC}
+                title="Depoimento de Pedro André — Luzanni"
+                todoLabel="Vídeo de depoimento (Pedro André / Luzanni) — ASSET-MANIFEST.md item 2."
+                posterEyebrow="Case real"
+                posterTitle="Como uma operação de varejo rompeu um teto de crescimento."
+                trackingId="pedro_andre_testimonial"
+              />
+            </EditorialVideoFrame>
+
+            <div>
+              <p className="text-[15px] leading-relaxed text-fg-muted">
+                Esse é um exemplo real de como uma operação de varejo respondeu depois que
+                aquisição, atendimento e conversão passaram a ser analisados como um único
+                sistema.
+              </p>
+              <div className="mt-4">
+                <ContextualCta>Quero analisar minha operação</ContextualCta>
+              </div>
+            </div>
+
             <div className="rounded-2xl border border-border-strong bg-bg-elevated/60 p-6">
               <AnimatedLineChart startLabel="R$50 mil/mês" endLabel="R$210 mil/mês" />
             </div>
@@ -79,10 +98,6 @@ export function CaseSection() {
         <p className="mx-auto mt-10 max-w-xl text-center text-sm text-fg-subtle">
           Resultados variam de acordo com o histórico, a estrutura e o mercado de cada operação.
         </p>
-
-        <div className="mt-8 text-center">
-          <ContextualCta>Aplicar para o Método QARVON</ContextualCta>
-        </div>
       </Container>
     </section>
   );

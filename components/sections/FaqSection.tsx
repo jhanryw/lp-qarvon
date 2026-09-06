@@ -27,7 +27,7 @@ const FAQS = [
   },
   {
     q: "Minha loja precisa vender online?",
-    a: "Não. O ICP principal da Qarvon é varejo de produto físico — loja física, híbrida ou com atacado, como a Luzanni.",
+    a: "Não. O ICP principal da Qarvon é varejo de produto físico — loja física, híbrida ou com atacado.",
   },
   {
     q: "E se meu gargalo realmente estiver no tráfego?",

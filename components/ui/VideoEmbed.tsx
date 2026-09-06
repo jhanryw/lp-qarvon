@@ -1,18 +1,29 @@
+import { CustomVideoPlayer } from "./CustomVideoPlayer";
+
 /**
  * Renders a 16:9 video from an env-provided URL (mp4 file or YouTube/Vimeo
  * embed link). Falls back to a poster-style placeholder in development
  * (never a red "error box" — see SELF-CRITIQUE.md #6) and disappears
  * entirely in production when the URL isn't configured, so the page never
- * ships a broken or fabricated player.
+ * ships a broken or fabricated player. Direct file sources get the fully
+ * custom play/pause/progress player (no native controls) — iframes (a
+ * hosted VSL, say) keep the provider's own player, since we can't strip an
+ * iframe's native controls or read its playback state without their SDK.
  */
 export function VideoEmbed({
   src,
   title,
   todoLabel,
+  posterEyebrow,
+  posterTitle,
+  trackingId,
 }: {
   src: string | undefined;
   title: string;
   todoLabel: string;
+  posterEyebrow?: string;
+  posterTitle?: string;
+  trackingId?: string;
 }) {
   if (!src) {
     if (process.env.NODE_ENV === "production") return null;
@@ -36,9 +47,13 @@ export function VideoEmbed({
   return (
     <div className="aspect-video w-full overflow-hidden rounded-2xl border border-border-strong bg-bg-elevated">
       {isDirectFile ? (
-        <video className="h-full w-full" controls playsInline preload="metadata" title={title}>
-          <source src={src} />
-        </video>
+        <CustomVideoPlayer
+          src={src}
+          title={title}
+          posterEyebrow={posterEyebrow}
+          posterTitle={posterTitle}
+          trackingId={trackingId ?? title}
+        />
       ) : (
         <iframe
           className="h-full w-full"
