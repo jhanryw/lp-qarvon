@@ -7,7 +7,7 @@ export function FinalCtaSection() {
     <section id="aplicar-info" className="scroll-mt-8 py-16 sm:py-24">
       <Container>
         <div className="relative overflow-hidden rounded-3xl border border-accent/30 bg-accent/[0.06] p-8 text-center sm:p-14">
-          <DepthBackground />
+          <DepthBackground scale="sm" flip />
           <h2 className="relative z-10 text-balance text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
             Antes de colocar mais dinheiro em mídia, descubra quanto sua operação atual ainda pode
             entregar.

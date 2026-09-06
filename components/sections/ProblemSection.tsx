@@ -1,13 +1,11 @@
 import { Container } from "@/components/ui/Container";
-import { DepthBackground } from "@/components/ui/DepthBackground";
 import { SectionEyebrow, SectionHeading } from "@/components/ui/SectionHeading";
 import { FunnelLeakDiagram } from "@/components/method/FunnelLeakDiagram";
 
 export function ProblemSection() {
   return (
-    <section className="relative overflow-hidden border-b border-border py-16 sm:py-24">
-      <DepthBackground variant="dim" />
-      <Container className="relative z-10">
+    <section className="border-b border-border py-16 sm:py-24">
+      <Container>
         <div className="mx-auto max-w-xl text-center">
           <SectionEyebrow>O problema</SectionEyebrow>
           <SectionHeading>Existe uma mentira cara sendo repetida no varejo.</SectionHeading>

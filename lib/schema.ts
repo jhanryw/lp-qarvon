@@ -1,11 +1,14 @@
 import { z } from "zod";
 
+// Ordered highest → lowest on purpose: leading with the biggest bracket
+// anchors higher, instead of letting the visitor default to the first
+// (smallest) option in the list.
 export const faturamentoOptions = [
-  "Até R$30 mil/mês",
-  "R$30 mil a R$70 mil/mês",
-  "R$70 mil a R$150 mil/mês",
-  "R$150 mil a R$300 mil/mês",
-  "R$300 mil+/mês",
+  "Mais de R$1 milhão/mês",
+  "R$500 mil a R$1 milhão/mês",
+  "R$100 mil a R$500 mil/mês",
+  "R$30 mil a R$100 mil/mês",
+  "Menos de R$30 mil/mês",
 ] as const;
 
 export const jaInvesteTrafegoOptions = ["Já invisto", "Ainda não invisto"] as const;
@@ -39,7 +42,7 @@ export const leadInputSchema = z.object({
     .trim()
     .min(10, "Informe um WhatsApp válido com DDD")
     .max(20),
-  instagram_site: z.string().trim().min(2, "Informe Instagram ou site").max(200),
+  empresa: z.string().trim().min(2, "Informe o nome da empresa").max(160),
   faturamento: z.enum(faturamentoOptions),
   ja_investe_trafego: z.enum(jaInvesteTrafegoOptions),
   // Honeypot: hidden from real users via CSS. Deliberately unrestricted so a
@@ -74,7 +77,7 @@ export type LeadRequest = z.infer<typeof leadRequestSchema>;
 export const stepSchemas = [
   leadInputSchema.pick({ nome: true }),
   leadInputSchema.pick({ whatsapp: true }),
-  leadInputSchema.pick({ instagram_site: true }),
+  leadInputSchema.pick({ empresa: true }),
   leadInputSchema.pick({ faturamento: true }),
   leadInputSchema.pick({ ja_investe_trafego: true }),
 ] as const;

@@ -13,7 +13,7 @@ import { Field, inputClassName } from "./Field";
 type FormState = {
   nome: string;
   whatsapp: string;
-  instagram_site: string;
+  empresa: string;
   faturamento: string;
   ja_investe_trafego: string;
   website: string;
@@ -22,7 +22,7 @@ type FormState = {
 const initialState: FormState = {
   nome: "",
   whatsapp: "",
-  instagram_site: "",
+  empresa: "",
   faturamento: "",
   ja_investe_trafego: "",
   website: "",
@@ -189,14 +189,14 @@ export function LeadForm() {
         )}
 
         {step === 2 && (
-          <Field label="Instagram ou site" htmlFor="instagram_site" error={errors.instagram_site}>
+          <Field label="Nome da empresa" htmlFor="empresa" error={errors.empresa}>
             <input
-              id="instagram_site"
+              id="empresa"
               className={inputClassName}
-              value={form.instagram_site}
-              onChange={(e) => update("instagram_site", e.target.value)}
+              value={form.empresa}
+              onChange={(e) => update("empresa", e.target.value)}
               onKeyDown={handleTextStepKeyDown}
-              placeholder="@sualoja ou seusite.com.br"
+              placeholder="Nome da sua loja"
               autoFocus
             />
           </Field>

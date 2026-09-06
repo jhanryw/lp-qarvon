@@ -11,8 +11,8 @@ export default function PrivacyPage() {
 
         <div className="mt-6 space-y-4 text-[15px] leading-relaxed text-fg-muted">
           <p>
-            Ao preencher o formulário de aplicação, a Qarvon coleta nome, WhatsApp, Instagram ou
-            site, faixa de faturamento e se você já investe em tráfego pago. Esses dados são
+            Ao preencher o formulário de aplicação, a Qarvon coleta nome, WhatsApp, nome da
+            empresa, faixa de faturamento e se você já investe em tráfego pago. Esses dados são
             usados exclusivamente para avaliar sua aplicação e entrar em contato.
           </p>
           <p>

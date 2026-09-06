@@ -10,7 +10,7 @@ import { sheets, auth } from "@googleapis/sheets";
 
 /**
  * Column order in the "Leads" sheet tab. Keep in sync with lib/schema.ts
- * (simplified form — nome/whatsapp/instagram_site/faturamento/
+ * (simplified form — nome/whatsapp/empresa/faturamento/
  * ja_investe_trafego only). lead_id lives in column B and is the
  * idempotency key: a resubmitted lead_id (client retry) is skipped rather
  * than appended twice.
@@ -20,7 +20,7 @@ export const SHEET_COLUMNS = [
   "lead_id",
   "nome",
   "whatsapp",
-  "instagram_site",
+  "empresa",
   "faturamento",
   "ja_investe_trafego",
   "lead_score",

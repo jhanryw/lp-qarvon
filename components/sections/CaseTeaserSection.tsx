@@ -1,14 +1,12 @@
 import { Container } from "@/components/ui/Container";
-import { DepthBackground } from "@/components/ui/DepthBackground";
 import { SectionEyebrow } from "@/components/ui/SectionHeading";
 import { AnimatedLineChart } from "@/components/ui/AnimatedLineChart";
 import { AssetPlaceholder } from "@/components/ui/AssetPlaceholder";
 
 export function CaseTeaserSection() {
   return (
-    <section className="relative overflow-hidden border-b border-border py-16 sm:py-24">
-      <DepthBackground flip />
-      <Container className="relative z-10">
+    <section className="border-b border-border py-16 sm:py-24">
+      <Container>
         <div className="mx-auto max-w-2xl text-center">
           <SectionEyebrow>Case real</SectionEyebrow>
           <p className="text-balance text-4xl font-extrabold tracking-tight text-fg sm:text-6xl">

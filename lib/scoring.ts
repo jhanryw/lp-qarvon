@@ -7,10 +7,10 @@ import type { LeadInput } from "./schema";
  * only route/prioritize.
  */
 const SCORE_RULES: Array<{ points: number; test: (lead: LeadInput) => boolean }> = [
-  { points: 3, test: (l) => l.faturamento === "R$150 mil a R$300 mil/mês" || l.faturamento === "R$300 mil+/mês" },
-  { points: 2, test: (l) => l.faturamento === "R$70 mil a R$150 mil/mês" },
-  { points: 1, test: (l) => l.faturamento === "R$30 mil a R$70 mil/mês" },
-  { points: -2, test: (l) => l.faturamento === "Até R$30 mil/mês" },
+  { points: 3, test: (l) => l.faturamento === "Mais de R$1 milhão/mês" || l.faturamento === "R$500 mil a R$1 milhão/mês" },
+  { points: 2, test: (l) => l.faturamento === "R$100 mil a R$500 mil/mês" },
+  { points: 1, test: (l) => l.faturamento === "R$30 mil a R$100 mil/mês" },
+  { points: -2, test: (l) => l.faturamento === "Menos de R$30 mil/mês" },
   { points: 2, test: (l) => l.ja_investe_trafego === "Já invisto" },
 ];
 

@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     lead_id: lead.lead_id,
     nome: lead.nome,
     whatsapp: lead.whatsapp,
-    instagram_site: lead.instagram_site,
+    empresa: lead.empresa,
     faturamento: lead.faturamento,
     ja_investe_trafego: lead.ja_investe_trafego,
     lead_score,
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
     lead: {
       name: lead.nome,
       phone: lead.whatsapp,
-      instagram_or_site: lead.instagram_site,
+      company: lead.empresa,
       revenue_range: lead.faturamento,
       paid_media_status: lead.ja_investe_trafego,
       score: lead_score,

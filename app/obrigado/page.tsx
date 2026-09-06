@@ -7,7 +7,7 @@ export const metadata = { title: "Aplicação recebida — Qarvon" };
 export default function ObrigadoPage() {
   return (
     <main className="relative flex flex-1 items-center overflow-hidden py-20">
-      <DepthBackground />
+      <DepthBackground scale="sm" />
       <Container className="relative z-10 mx-auto max-w-xl text-center">
         <span className="mb-6 inline-flex size-14 items-center justify-center rounded-full border border-accent/50 bg-accent/10 text-2xl text-accent">
           ✓
