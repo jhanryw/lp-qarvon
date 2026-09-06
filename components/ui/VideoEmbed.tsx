@@ -17,7 +17,6 @@ export function VideoEmbed({
   src,
   title,
   todoLabel,
-  posterEyebrow,
   posterTitle,
   trackingId,
   aspectRatio = "16/9",
@@ -25,7 +24,6 @@ export function VideoEmbed({
   src: string | undefined;
   title: string;
   todoLabel: string;
-  posterEyebrow?: string;
   posterTitle?: string;
   trackingId?: string;
   aspectRatio?: string;
@@ -58,7 +56,6 @@ export function VideoEmbed({
         <CustomVideoPlayer
           src={src}
           title={title}
-          posterEyebrow={posterEyebrow}
           posterTitle={posterTitle}
           trackingId={trackingId ?? title}
           aspectRatio={aspectRatio}

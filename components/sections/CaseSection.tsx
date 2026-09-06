@@ -62,7 +62,6 @@ export function CaseSection() {
                   src={CASE_VIDEO_SRC}
                   title="Depoimento de Pedro André — Luzanni"
                   todoLabel="Vídeo de depoimento (Pedro André / Luzanni) — ASSET-MANIFEST.md item 2."
-                  posterEyebrow="Case real"
                   posterTitle="Como uma operação de varejo rompeu um teto de crescimento."
                   trackingId="pedro_andre_testimonial"
                   aspectRatio="9/16"
