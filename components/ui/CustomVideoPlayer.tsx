@@ -33,12 +33,15 @@ export function CustomVideoPlayer({
   posterEyebrow,
   posterTitle,
   trackingId,
+  aspectRatio = "16/9",
 }: {
   src: string;
   title: string;
   posterEyebrow?: string;
   posterTitle?: string;
   trackingId: string;
+  /** CSS aspect-ratio value, e.g. "16/9" (landscape) or "9/16" (vertical/story). Must match the source file's real dimensions or the video gets cropped/stretched by object-cover. */
+  aspectRatio?: string;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const firedRef = useRef<Set<string>>(new Set());
@@ -108,7 +111,8 @@ export function CustomVideoPlayer({
 
   return (
     <div
-      className="group relative aspect-video w-full cursor-pointer select-none overflow-hidden rounded-xl bg-black"
+      className="group relative w-full cursor-pointer select-none overflow-hidden rounded-xl bg-black"
+      style={{ aspectRatio }}
       onClick={togglePlay}
       onContextMenu={handleContextMenu}
       onDoubleClick={handleDoubleClick}

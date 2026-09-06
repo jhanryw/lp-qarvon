@@ -52,16 +52,23 @@ export function CaseSection() {
 
         <div className="mx-auto mt-10 grid max-w-5xl gap-10 lg:grid-cols-2 lg:items-start">
           <div className="flex flex-col gap-6">
-            <EditorialVideoFrame label="Case real">
-              <VideoEmbed
-                src={CASE_VIDEO_SRC}
-                title="Depoimento de Pedro André — Luzanni"
-                todoLabel="Vídeo de depoimento (Pedro André / Luzanni) — ASSET-MANIFEST.md item 2."
-                posterEyebrow="Case real"
-                posterTitle="Como uma operação de varejo rompeu um teto de crescimento."
-                trackingId="pedro_andre_testimonial"
-              />
-            </EditorialVideoFrame>
+            {/* Source is a vertical/story-format recording (1080×1920, 9:16) —
+                capped width so it doesn't turn into an oversized column on
+                desktop once sized at its real aspect ratio instead of a
+                cropped 16:9. */}
+            <div className="mx-auto w-full max-w-[300px] sm:max-w-[340px]">
+              <EditorialVideoFrame label="Case real">
+                <VideoEmbed
+                  src={CASE_VIDEO_SRC}
+                  title="Depoimento de Pedro André — Luzanni"
+                  todoLabel="Vídeo de depoimento (Pedro André / Luzanni) — ASSET-MANIFEST.md item 2."
+                  posterEyebrow="Case real"
+                  posterTitle="Como uma operação de varejo rompeu um teto de crescimento."
+                  trackingId="pedro_andre_testimonial"
+                  aspectRatio="9/16"
+                />
+              </EditorialVideoFrame>
+            </div>
 
             <div>
               <p className="text-[15px] leading-relaxed text-fg-muted">
