@@ -169,7 +169,7 @@ export function LeadForm() {
   }
 
   return (
-    <div className="rounded-2xl border border-border-strong bg-bg-elevated/60 p-6 sm:p-8">
+    <div>
       <ProgressBar step={step} totalSteps={TOTAL_STEPS} />
 
       <div className="flex flex-col gap-4">

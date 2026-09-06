@@ -1,20 +1,20 @@
 import { Container } from "@/components/ui/Container";
+import { ContextualCta } from "@/components/ui/ContextualCta";
+import { DepthBackground } from "@/components/ui/DepthBackground";
 
 export function FinalCtaSection() {
   return (
-    <section className="py-16 sm:py-24">
+    <section id="aplicar-info" className="scroll-mt-8 py-16 sm:py-24">
       <Container>
-        <div className="rounded-3xl border border-accent/30 bg-accent/[0.06] p-8 text-center sm:p-14">
-          <h2 className="text-balance text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
+        <div className="relative overflow-hidden rounded-3xl border border-accent/30 bg-accent/[0.06] p-8 text-center sm:p-14">
+          <DepthBackground />
+          <h2 className="relative z-10 text-balance text-3xl font-semibold tracking-tight text-fg sm:text-4xl">
             Antes de colocar mais dinheiro em mídia, descubra quanto sua operação atual ainda pode
             entregar.
           </h2>
-          <a
-            href="#aplicar"
-            className="mt-8 inline-flex min-h-[44px] items-center justify-center rounded-full bg-accent px-7 py-3 text-[15px] font-semibold text-[#08110f] transition-colors hover:bg-accent-strong"
-          >
-            Quero aplicar para o diagnóstico
-          </a>
+          <div className="relative z-10 mt-8">
+            <ContextualCta>Solicitar diagnóstico</ContextualCta>
+          </div>
         </div>
       </Container>
     </section>

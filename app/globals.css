@@ -78,3 +78,55 @@ body {
     animation: none;
   }
 }
+
+@keyframes draw-line {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-draw-line {
+  stroke-dasharray: 340;
+  stroke-dashoffset: 340;
+  animation: draw-line 1.8s ease-out 0.2s forwards;
+}
+
+@keyframes travel-particle {
+  from {
+    left: 0;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+.animate-travel-particle {
+  animation: travel-particle 2.4s linear infinite;
+}
+
+@keyframes blip {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+}
+
+.animate-blip {
+  animation: blip 1.6s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-draw-line {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+  .animate-travel-particle,
+  .animate-blip {
+    animation: none;
+  }
+}
