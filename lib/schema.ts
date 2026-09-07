@@ -11,6 +11,8 @@ export const faturamentoOptions = [
   "Menos de R$30 mil/mês",
 ] as const;
 
+export type Faturamento = (typeof faturamentoOptions)[number];
+
 export const jaInvesteTrafegoOptions = ["Já invisto", "Ainda não invisto"] as const;
 
 export const attributionSchema = z.object({
@@ -24,6 +26,18 @@ export const attributionSchema = z.object({
   fbclid: z.string().max(512).optional().default(""),
   fbp: z.string().max(512).optional().default(""),
   fbc: z.string().max(512).optional().default(""),
+  // Preenchidos via querystring do anúncio (?campaign_id={{campaign.id}}&
+  // adset_id={{adset.id}}&ad_id={{ad.id}}), independentes dos UTMs — Meta
+  // Ads não preenche automaticamente esses IDs em nenhum UTM padrão.
+  campaign_id: z.string().max(256).optional().default(""),
+  adset_id: z.string().max(256).optional().default(""),
+  ad_id: z.string().max(256).optional().default(""),
+  // Google Ads — capturados mesmo sem nenhuma integração Google Ads
+  // implementada ainda, mesma simetria de lib/integrations/leads/schema.ts
+  // no Qarvon OS.
+  gclid: z.string().max(512).optional().default(""),
+  gbraid: z.string().max(512).optional().default(""),
+  wbraid: z.string().max(512).optional().default(""),
 });
 
 export type Attribution = z.infer<typeof attributionSchema>;
@@ -60,11 +74,17 @@ const emptyAttribution: Attribution = {
   utm_source: "",
   utm_medium: "",
   utm_campaign: "",
-  utm_content: "",
   utm_term: "",
+  utm_content: "",
   fbclid: "",
   fbp: "",
   fbc: "",
+  campaign_id: "",
+  adset_id: "",
+  ad_id: "",
+  gclid: "",
+  gbraid: "",
+  wbraid: "",
 };
 
 export const leadRequestSchema = leadInputSchema.extend({

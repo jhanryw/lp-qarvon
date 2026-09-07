@@ -4,16 +4,18 @@ export function RadioCardGroup({
   value,
   onChange,
   columns = 1,
+  disabled = false,
 }: {
   name: string;
   options: readonly string[];
   value: string;
   onChange: (value: string) => void;
   columns?: 1 | 2;
+  disabled?: boolean;
 }) {
   return (
     <div
-      className={`grid gap-2 ${columns === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"}`}
+      className={`grid gap-2 ${columns === 2 ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"} ${disabled ? "pointer-events-none opacity-60" : ""}`}
       role="radiogroup"
     >
       {options.map((option) => {
@@ -33,6 +35,7 @@ export function RadioCardGroup({
               value={option}
               checked={checked}
               onChange={() => onChange(option)}
+              disabled={disabled}
               className="sr-only"
             />
             {option}

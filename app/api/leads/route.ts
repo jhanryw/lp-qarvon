@@ -5,6 +5,8 @@ import { persistLead, type LeadRecord } from "@/lib/leadPersistence";
 import { dispatchLeadWebhooks } from "@/lib/webhooks";
 import { buildCalcomRedirectUrl } from "@/lib/calcom";
 import { isRateLimited } from "@/lib/rateLimit";
+import { faturamentoToRevenueRange } from "@/lib/revenueRange";
+import { sendLeadToQarvonOS } from "@/lib/qarvonOsLeadBackend";
 
 // This route depends on Node-only APIs (@googleapis/sheets' underlying
 // google-auth-library, node:crypto, node:fs/promises) that don't run on the
@@ -24,6 +26,26 @@ export const runtime = "nodejs";
 // scoped `@googleapis/sheets` package (~1MB) — see lib/sheets.ts.
 
 export async function POST(request: Request) {
+  // Rede de segurança final: qualquer exceção não prevista em algo abaixo
+  // (scoring, persistência, chamada ao Qarvon OS) NUNCA pode escapar como
+  // uma página de erro HTML do Next — o cliente faz response.json() no
+  // corpo da resposta (ver components/form/LeadForm.tsx), e um corpo HTML
+  // nesse parse falha com uma mensagem genérica de "falha de conexão" que
+  // esconde a causa real. Handler específicos abaixo (Qarvon OS, Sheets,
+  // webhook) já não lançam por construção — isto é defesa em profundidade,
+  // não a linha de tratamento principal.
+  try {
+    return await handleLeadSubmission(request);
+  } catch (error) {
+    console.error("[api/leads] erro inesperado não tratado:", error);
+    return NextResponse.json(
+      { error: "Não foi possível enviar seus dados agora. Tente novamente em instantes." },
+      { status: 500 },
+    );
+  }
+}
+
+async function handleLeadSubmission(request: Request): Promise<Response> {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
 
   if (isRateLimited(ip)) {
@@ -85,18 +107,77 @@ export async function POST(request: Request) {
     webhook_status: "pending",
   };
 
-  // Route/form don't know or care which backend this is (Sheets today,
-  // maybe Supabase/CRM tomorrow) — see lib/leadPersistence.ts.
-  const { persisted, duplicate } = await persistLead(row);
+  // Qarvon OS é a fonte de verdade agora — gate de sucesso da submissão.
+  // Chamado ANTES do Sheets de propósito: se falhar aqui, a resposta já é
+  // erro e o Sheets sequer é tentado (evita persistir em um lugar que não é
+  // mais o CRM real quando o CRM real recusou o lead).
+  const qarvonResult = await sendLeadToQarvonOS({
+    externalSubmissionId: lead.lead_id,
+    name: lead.nome,
+    whatsapp: lead.whatsapp,
+    company: lead.empresa,
+    revenueRange: faturamentoToRevenueRange(lead.faturamento),
+    investsPaidTraffic: lead.ja_investe_trafego === "Já invisto",
+    attribution: lead.attribution,
+  });
 
-  if (!persisted) {
-    // Lead couldn't be saved anywhere. Fail loudly instead of silently
-    // dropping it — the client shows an error and the user can retry or
-    // reach out directly.
-    return NextResponse.json(
-      { error: "Não conseguimos registrar sua aplicação agora. Tente novamente em instantes." },
-      { status: 502 },
-    );
+  if (!qarvonResult.ok) {
+    if (qarvonResult.reason === "not_configured" && process.env.NODE_ENV !== "production") {
+      // Dev local sem QARVON_OS_API_URL/QARVON_OS_INTEGRATION_TOKEN: não
+      // bloqueia (mesma postura de isSheetsConfigured/appendLeadLocally) —
+      // permite iterar na LP sem um Qarvon OS local rodando. Em produção
+      // essa mesma condição é uma configuração ausente real, ver abaixo.
+      console.warn("[api/leads] Qarvon OS não configurado — pulando em ambiente de desenvolvimento.");
+    } else {
+      // Log específico por causa — nunca o token, nunca o payload — para
+      // que 401/422/5xx/timeout sejam diferenciáveis nos logs do servidor
+      // mesmo quando o lead só vê uma mensagem genérica.
+      switch (qarvonResult.reason) {
+        case "unauthorized":
+          // Erro de CONFIGURAÇÃO da integração (token/pepper/credencial),
+          // nunca do lead — não expor esse detalhe na resposta.
+          console.error(
+            "[api/leads] Qarvon OS: token de integração rejeitado (401) — verificar QARVON_OS_INTEGRATION_TOKEN / INTEGRATION_TOKEN_PEPPER / credencial ativa no Qarvon OS.",
+          );
+          break;
+        case "validation":
+          // Não deveria acontecer com um formulário válido: é a LP enviando
+          // algo fora do contrato do Qarvon OS — erro de CONTRATO, não do
+          // usuário.
+          console.error(
+            "[api/leads] Qarvon OS recusou o payload como inválido (422) — provável divergência de contrato entre LP e Qarvon OS:",
+            qarvonResult.message,
+          );
+          break;
+        case "not_configured":
+          console.error(
+            "[api/leads] Qarvon OS não configurado em produção — QARVON_OS_API_URL/QARVON_OS_INTEGRATION_TOKEN ausentes no ambiente.",
+          );
+          break;
+        default:
+          // server_error / network_error: falha temporária (5xx ou
+          // timeout/rede) do lado do Qarvon OS.
+          console.error(
+            "[api/leads] Qarvon OS indisponível temporariamente:",
+            qarvonResult.reason,
+            qarvonResult.status,
+            qarvonResult.message,
+          );
+      }
+      return NextResponse.json(
+        { error: "Não foi possível enviar seus dados agora. Tente novamente em instantes." },
+        { status: 502 },
+      );
+    }
+  }
+
+  // Sheets agora é secundário/best-effort: só registrado para referência —
+  // uma falha aqui NUNCA derruba a resposta de sucesso, já garantida pelo
+  // Qarvon OS acima. Route/form don't know or care which backend this is —
+  // see lib/leadPersistence.ts.
+  const { persisted: sheetsPersisted, backend: sheetsBackend } = await persistLead(row);
+  if (!sheetsPersisted) {
+    console.error("[api/leads] Sheets (secundário) não persistiu o lead:", sheetsBackend);
   }
 
   const webhookResults = await dispatchLeadWebhooks({
@@ -122,7 +203,9 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     success: true,
-    duplicate,
+    // Reflete a idempotência do Qarvon OS (mesmo external_submission_id
+    // reenviado), não mais a do Sheets — é a fonte de verdade agora.
+    duplicate: qarvonResult.ok ? qarvonResult.duplicateSubmission : false,
     // Cal.com link is preserved in the sheet row (cal_redirect_url) for
     // manual use, but the visitor is sent to our own thank-you page —
     // scheduling now happens after a human reviews the lead.

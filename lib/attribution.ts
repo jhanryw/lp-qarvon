@@ -27,14 +27,32 @@ export function captureAttribution(): Attribution {
       fbclid: "",
       fbp: "",
       fbc: "",
+      campaign_id: "",
+      adset_id: "",
+      ad_id: "",
+      gclid: "",
+      gbraid: "",
+      wbraid: "",
     };
   }
 
   const stored = sessionStorage.getItem(STORAGE_KEY);
   const params = new URLSearchParams(window.location.search);
-  const hasNewUtm = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "fbclid"].some(
-    (key) => params.get(key),
-  );
+  const newAttributionKeys = [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_content",
+    "utm_term",
+    "fbclid",
+    "campaign_id",
+    "adset_id",
+    "ad_id",
+    "gclid",
+    "gbraid",
+    "wbraid",
+  ];
+  const hasNewUtm = newAttributionKeys.some((key) => params.get(key));
 
   if (stored && !hasNewUtm) {
     try {
@@ -55,6 +73,14 @@ export function captureAttribution(): Attribution {
     fbclid: params.get("fbclid") ?? "",
     fbp: readCookie("_fbp"),
     fbc: readCookie("_fbc"),
+    // Vêm da URL do anúncio (?campaign_id=...&adset_id=...&ad_id=...),
+    // não de nenhum UTM padrão — ver lib/schema.ts.
+    campaign_id: params.get("campaign_id") ?? "",
+    adset_id: params.get("adset_id") ?? "",
+    ad_id: params.get("ad_id") ?? "",
+    gclid: params.get("gclid") ?? "",
+    gbraid: params.get("gbraid") ?? "",
+    wbraid: params.get("wbraid") ?? "",
   };
 
   sessionStorage.setItem(STORAGE_KEY, JSON.stringify(attribution));

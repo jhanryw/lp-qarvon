@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { faturamentoOptions, jaInvesteTrafegoOptions, stepSchemas } from "@/lib/schema";
 import { captureAttribution } from "@/lib/attribution";
@@ -103,6 +103,12 @@ export function LeadForm() {
   }
 
   async function handleSubmit(currentForm: FormState) {
+    // Trava dupla submissão: o botão "Continuar" já desabilita durante
+    // submitting, mas os passos de auto-advance (RadioCardGroup) disparam
+    // handleSubmit direto do onChange do rádio — sem esta guarda, um duplo
+    // toque rápido antes do primeiro re-render poderia disparar duas
+    // chamadas concorrentes a /api/leads.
+    if (status === "submitting") return;
     if (!validateStep(TOTAL_STEPS - 1, currentForm)) return;
     setStatus("submitting");
     setServerError(null);
@@ -127,11 +133,21 @@ export function LeadForm() {
       }
 
       setStatus("success");
-      window.fbq?.("track", "Lead");
+      // eventID = mesmo external_submission_id enviado ao Qarvon OS
+      // (leadIdRef.current) — prepara a dedup Pixel↔CAPI futura sem
+      // implementá-la agora. Disparado uma única vez por sessão: o form já
+      // não permite reenvio depois de status vira "success".
+      window.fbq?.("track", "Lead", {}, { eventID: leadIdRef.current });
       router.push(data.redirectUrl || "/obrigado");
     } catch {
+      // fetch() lançou (rede real fora do ar) ou response.json() não
+      // conseguiu parsear o corpo (ex.: servidor devolveu uma página de
+      // erro HTML em vez de JSON, por uma exceção não tratada na rota —
+      // ver o try/catch de topo em app/api/leads/route.ts). Não dá pra
+      // diferenciar as duas causas daqui, mas nenhuma das duas é
+      // necessariamente "a internet do usuário" — evitar afirmar isso.
       setStatus("error");
-      setServerError("Falha de conexão. Verifique sua internet e tente novamente.");
+      setServerError("Não foi possível conectar. Tente novamente.");
     }
   }
 
@@ -140,6 +156,23 @@ export function LeadForm() {
       e.preventDefault();
       handleNext();
     }
+  }
+
+  /**
+   * Garante que o input focado fique visível acima do teclado virtual.
+   * Só roda em dispositivo com ponteiro grosseiro (touch) — é a forma
+   * padrão de detectar "provavelmente tem teclado virtual que cobre tela",
+   * sem depender de largura de janela (que também varia em desktop). Em
+   * mouse/trackpad isso nunca dispara, então não há scroll extra no
+   * desktop. O atraso espera o teclado abrir/o layout (visualViewport)
+   * estabilizar antes de medir onde o elemento está.
+   */
+  function handleFocusScrollIntoView(e: FocusEvent<HTMLInputElement>) {
+    if (typeof window === "undefined" || !window.matchMedia?.("(pointer: coarse)").matches) return;
+    const el = e.currentTarget;
+    window.setTimeout(() => {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 300);
   }
 
   const isLastStep = step === TOTAL_STEPS - 1;
@@ -166,6 +199,7 @@ export function LeadForm() {
               value={form.nome}
               onChange={(e) => update("nome", e.target.value)}
               onKeyDown={handleTextStepKeyDown}
+              onFocus={handleFocusScrollIntoView}
               autoComplete="name"
               autoFocus
             />
@@ -181,6 +215,7 @@ export function LeadForm() {
               value={form.whatsapp}
               onChange={(e) => update("whatsapp", formatBrPhone(e.target.value))}
               onKeyDown={handleTextStepKeyDown}
+              onFocus={handleFocusScrollIntoView}
               placeholder="(11) 91234-5678"
               autoComplete="tel"
               autoFocus
@@ -196,6 +231,7 @@ export function LeadForm() {
               value={form.empresa}
               onChange={(e) => update("empresa", e.target.value)}
               onKeyDown={handleTextStepKeyDown}
+              onFocus={handleFocusScrollIntoView}
               placeholder="Nome da sua loja"
               autoFocus
             />
@@ -224,6 +260,7 @@ export function LeadForm() {
               options={jaInvesteTrafegoOptions}
               value={form.ja_investe_trafego}
               onChange={(v) => handleAutoAdvance("ja_investe_trafego", v)}
+              disabled={status === "submitting"}
             />
           </Field>
         )}
@@ -239,7 +276,21 @@ export function LeadForm() {
           autoComplete="off"
         />
 
-        {serverError ? <p className="text-sm text-danger">{serverError}</p> : null}
+        {serverError ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-danger">{serverError}</p>
+            {isLastStep && (
+              // Reenviar a etapa final via clique num rádio já selecionado
+              // não dispara onChange (o valor não muda) — sem este botão,
+              // uma falha na última etapa deixaria o formulário sem
+              // nenhuma forma de tentar de novo. Reusa o mesmo form state
+              // (mesmo external_submission_id em leadIdRef).
+              <Button type="button" variant="secondary" onClick={() => void handleSubmit(form)} disabled={status === "submitting"}>
+                Tentar novamente
+              </Button>
+            )}
+          </div>
+        ) : null}
 
         {!AUTO_ADVANCE_STEPS.has(step) && (
           <div className="mt-2 flex items-center justify-between gap-3">

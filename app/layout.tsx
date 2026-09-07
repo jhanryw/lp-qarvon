@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 
@@ -17,6 +17,17 @@ function resolveSiteUrl(): URL {
 }
 
 const SITE_URL = resolveSiteUrl();
+
+// viewportFit: "cover" é o que faz env(safe-area-inset-bottom) deixar de
+// ser sempre 0 — sem isso o navegador já reserva a safe area sozinho e o
+// padding-bottom condicional do LeadFormModal seria um no-op inofensivo,
+// mas também nunca protegeria o CTA numa página que decida ocupar a tela
+// inteira. Não afeta layout de quem não usa env(safe-area-inset-*).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   metadataBase: SITE_URL,
